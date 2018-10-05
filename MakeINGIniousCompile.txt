@@ -1,0 +1,54 @@
+--- Question 1: Résoudre un nom de ressource
+
+const char * real_address(const char *address, struct sockaddr_in6 *rval)
+{
+  struct addrinfo *result;
+  struct addrinfo criteria;
+  criteria.ai_family = AF_INET6;
+  criteria.ai_socktype = 0;
+  criteria.ai_protocol = 0;
+  int err;
+  err = getaddrinfo(address, NULL, &criteria, &result);
+  if(err == 0)
+  {
+    char *error = "Problème à l'exécution de getaddrinfo";
+    return error;
+  }
+  rval = (struct sockaddr_in6 *)result;
+  uint32_t a = rval->sin6_flowinfo;
+    a++;
+  return NULL;
+}
+
+--- Question 2: Création d'un socket
+
+#include <netinet/in.h> /* * sockaddr_in6 */
+#include <sys/types.h> /* sockaddr_in6 */
+#include <string.h> /* NULL */
+#include <netdb.h> /* struct addrinfo */
+
+int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockaddr_in6 *dest_addr, int dst_port)
+{
+    uint32_t a = source_addr->sin6_flowinfo;
+    uint32_t b = dest_addr->sin6_flowinfo;
+    a++;
+    b++;
+    src_port++;
+    dst_port++;
+    return 0;
+}
+
+
+---Question 3: Lire et écrire des données
+
+void read_write_loop(int sfd)
+{
+    sfd++;
+}
+
+--- Question 4: Détecter la connection d'un client
+int wait_for_client(int sfd)
+{
+    sfd++;
+    return 0;
+}
