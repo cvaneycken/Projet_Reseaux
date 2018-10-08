@@ -3,6 +3,12 @@
 
 #include <netinet/in.h> /* * sockaddr_in6 */
 #include <sys/types.h> /* sockaddr_in6 */
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <netdb.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
 
 /* Resolve the resource name to an usable IPv6 address
  * @address: The name to resolve
@@ -12,6 +18,7 @@
  *          (const char* means the caller cannot modify or free the return value,
  *           so do not use malloc!)
  */
-const char * real_address(const char *address, struct sockaddr_in6 *rval);
+const char * real_address(const char *address, struct sockaddr_in6 *rval){
+}
 
 #endif
