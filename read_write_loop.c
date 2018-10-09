@@ -1,5 +1,5 @@
 //INSPIRED BY https://www.binarytides.com/multiple-socket-connections-fdset-select-linux/
-
+#include "read_write_loop.h"
 #include <netinet/in.h> /* * sockaddr_in6 */
 #include <sys/types.h> /* sockaddr_in6 */
 #include <stdio.h>
@@ -21,19 +21,17 @@
  * @return: as soon as stdin signals EOF
  */
 void read_write_loop(int sfd){
-  int wfd,rfd;
-  int wfd2,rfd2;
-  char buffer[256];
+  int wfd,rfd,wfd2,rfd2,activity;
+  char buffer[1024];
   fd_set writeSet;
   fd_set readSet;
 
   while(1){
 
-    bzero(buffer,256);
-    fgets(buffer,255,stdin);
+    bzero(buffer,1024);
     //Reading from stdin
-    rfd2=read(stdin,buffer,255);
-    if(rfd2!=255){
+    rfd2=read(STDIN_FILENO,buffer,1024);
+    if(rfd2!=1024){
       fprintf(stderr, "Err:Couldn't read from stdin\n");
       exit(-1);
     }
@@ -45,23 +43,26 @@ void read_write_loop(int sfd){
       exit(-1);
     }
     FD_SET(wfd,(fd_set *)&writeSet);
-    bzero(buffer,256);
+    bzero(buffer,1024);
     //Reads from socket
-    rfd=read(sfd,buffer,255);
-    if(rfd<0){
+    rfd=read(sfd,buffer,1024);
+    if(rfd!=1024){
       fprintf(stderr, "Err at reading from socket\n");
       exit(-1);
     }
     FD_SET(rfd,(fd_set *)&readSet);
     //Write to stdout
-    wfd2=write(stdout,buffer,strlen(buffer));
+    wfd2=write(STDOUT_FILENO,buffer,strlen(buffer));
     if(wfd2<0){
       fprintf(stderr, "Err=Failed at Writing on stdout\n");
       exit(-1);
     }
     FD_SET(wfd2,(fd_set *)&writeSet);
 
-    int activity=select(sfd,(fd_set*)&readSet,(fd_set *)&writeSet,NULL,NULL);
+    activity=select(sfd,(fd_set*)&readSet,(fd_set *)&writeSet,NULL,NULL);
+    if(activity==-1){
+      fprintf(stderr, "Err: Select\n");
+    }
 
   }
 
