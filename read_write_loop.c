@@ -28,7 +28,7 @@ void read_write_loop(int sfd){
 
   while(1){
 
-    bzero(buffer,1024);
+    memset(buffer,'\0',1024);
     //Reading from stdin
     rfd2=read(STDIN_FILENO,buffer,1024);
     if(rfd2!=1024){
@@ -43,7 +43,7 @@ void read_write_loop(int sfd){
       exit(-1);
     }
     FD_SET(wfd,(fd_set *)&writeSet);
-    bzero(buffer,1024);
+    memset(buffer,'\0',1024);
     //Reads from socket
     rfd=read(sfd,buffer,1024);
     if(rfd!=1024){
