@@ -8,6 +8,7 @@
 #include <arpa/inet.h>
 #include "create_socket.h"
 #include <errno.h>      /* errno */
+#define _OPEN_SYS_SOCK_IPV6 1
 
 /* Creates a socket and initialize it
  * @source_addr: if !NULL, the source address that should be bound to this socket
@@ -19,7 +20,8 @@
  */
 int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockaddr_in6 *dest_addr, int dst_port){
   //making descriptor
-  int descriptor=socket(AF_INET6,SOCK_DGRAM,0);
+  //17 bc of UDP protocol
+  int descriptor=socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP);
   if(descriptor==-1){
     fprintf(stderr, "Fail: socket function\n");
     return -1;
@@ -27,7 +29,7 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockadd
   //bounding server
   if(source_addr!=NULL){
     //@src_port: if >0, the port on which the socket is listening
-    //cast src_port to "u_int16m_t" bc of sin6_port's type:
+    //cast src_port to "in_port_t" bc of sin6_port's type:
     /* struct sockaddr_in6 {
      * sa_family_t     sin6_family;   //
      * in_port_t       sin6_port;     // port
@@ -39,10 +41,12 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockadd
     if(src_port>0){
       source_addr->sin6_port=htons(src_port);
     }
-    int err=bind(descriptor,(const struct sockaddr*)source_addr,sizeof(struct sockaddr_in6));
-    if(err==-1){
-      fprintf(stderr, "Fail:bind function, %s\n",strerror(errno));
-      return -1;
+    if(source_addr->sin6_family==AF_INET6){
+      int err=bind(descriptor,(const struct sockaddr*)source_addr,sizeof(struct sockaddr_in6));
+      if(err==-1){
+        fprintf(stderr, "Fail:bind function, %s\n",strerror(errno));
+        return -1;
+      }
     }
   }
   //connecting client
