@@ -18,16 +18,27 @@
  *           so do not use malloc!)
  */
 const char * real_address(const char *address, struct sockaddr_in6 *rval){
+  int err;
+  if(rval==NULL){
+    fprintf(stderr, "rval==NULL\n");
+    return ("rval is NULL");
+  }
   struct addrinfo hints, *servinfo;
   hints.ai_family=AF_INET6;
-  hints.ai_socktype=0;
-  hints.ai_protocol=0;
-
-  if(getaddrinfo(address, NULL, &hints, &servinfo)!=0){
-    fprintf(stderr, "getaddrinfo!=0\n");
-    return "Ca ne marche pas";
+  hints.ai_socktype=SOCK_DGRAM;
+  hints.ai_protocol=17;
+  hints.ai_flags=(AI_V4MAPPED | AI_ADDRCONFIG);
+  err=getaddrinfo(address, NULL, &hints, &servinfo);
+  //Testing returned error
+  if(err!=0){
+    fprintf(stderr, "Err at getaddrinfo:%d \n",err);
+    fprintf(stderr, "%s\n",gai_strerror(err));
+    return gai_strerror(err);
   }
   struct sockaddr_in6 *t=(struct sockaddr_in6 *)(hints.ai_addr);
     *rval=*t;
+    //Free servinfo
+
+    freeaddrinfo(servinfo);
     return NULL;
 }
