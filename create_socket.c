@@ -54,10 +54,12 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockadd
     if(dst_port>0){
       dest_addr->sin6_port=htons(dst_port);
     }
-  int err2=connect(descriptor,(const struct sockaddr *)dest_addr,sizeof(dest_addr));
-  if(err2==-1){
-    fprintf(stderr, "Fail:connect function\n");
-    return -1;
+    if(dest_addr->sin6_family==AF_INET6){
+      int err2=connect(descriptor,(const struct sockaddr *)dest_addr,sizeof(dest_addr));
+      if(err2==-1){
+        fprintf(stderr, "Fail:connect function\n");
+        return -1;
+      }
   }
 }
   return descriptor;
