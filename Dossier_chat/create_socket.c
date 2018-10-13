@@ -21,7 +21,7 @@
 int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockaddr_in6 *dest_addr, int dst_port){
   //making descriptor
   //17 bc of UDP protocol
-  int descriptor=socket(AF_INET6,SOCK_DGRAM,IPPROTO_UDP);
+  int descriptor=socket(AF_INET6,SOCK_DGRAM,0);
   if(descriptor==-1){
     fprintf(stderr, "Fail: socket function\n");
     return -1;
@@ -55,7 +55,7 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockadd
       dest_addr->sin6_port=htons(dst_port);
     }
     if(dest_addr->sin6_family==AF_INET6){
-      int err2=connect(descriptor,(const struct sockaddr *)dest_addr,sizeof(dest_addr));
+      int err2=connect(descriptor,(const struct sockaddr *)dest_addr,sizeof(struct sockaddr_in6));
       if(err2==-1){
         fprintf(stderr, "Fail:connect function\n");
         return -1;
