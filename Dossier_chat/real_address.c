@@ -26,8 +26,8 @@ const char * real_address(const char *address, struct sockaddr_in6 *rval){
   struct addrinfo hints, *servinfo;
   hints.ai_family=AF_INET6;
   hints.ai_socktype=SOCK_DGRAM;
-  hints.ai_protocol=17;
-  hints.ai_flags=(AI_V4MAPPED | AI_ADDRCONFIG);
+  hints.ai_protocol=IPPROTO_UDP;
+  hints.ai_flags=AI_PASSIVE;
   err=getaddrinfo(address, NULL, &hints, &servinfo);
   //Testing returned error
   if(err!=0){
@@ -35,8 +35,7 @@ const char * real_address(const char *address, struct sockaddr_in6 *rval){
     fprintf(stderr, "%s\n",gai_strerror(err));
     return gai_strerror(err);
   }
-  struct sockaddr_in6 *t=(struct sockaddr_in6 *)(hints.ai_addr);
-    *rval=*t;
+  memcpy((void *)rval,(void*)servinfo->ai_addr,servinfo->ai_addrlen);
     //Free servinfo
 
     freeaddrinfo(servinfo);

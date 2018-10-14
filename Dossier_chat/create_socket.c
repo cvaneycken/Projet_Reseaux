@@ -21,9 +21,14 @@
 int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockaddr_in6 *dest_addr, int dst_port){
   //making descriptor
   //17 bc of UDP protocol
+  int option = 1;
   int descriptor=socket(AF_INET6,SOCK_DGRAM,0);
   if(descriptor==-1){
     fprintf(stderr, "Fail: socket function\n");
+    return -1;
+  }
+  if(setsockopt(descriptor,SOL_SOCKET,(SO_REUSEPORT | SO_REUSEADDR| SO_KEEPALIVE),(char *)&option,sizeof(option))==-1){
+    fprintf(stderr, "Fail: setsockopt function, %s\n", strerror(errno));
     return -1;
   }
   //bounding server
@@ -49,6 +54,7 @@ int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockadd
       }
     }
   }
+
   //connecting client
   if(dest_addr!=NULL){
     if(dst_port>0){

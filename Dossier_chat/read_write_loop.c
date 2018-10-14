@@ -1,66 +1,64 @@
-/*SOURCES:
- *http://www.khmere.com/freebsd_book/src/06/poll_socket.c.html
- *https://github.com/mrahrauld/CN_Gr37/blob/master/read_write_loop.c
- */
+//SOURCE: https://github.com/sCreami/cnp3-p1/blob/master/inginious/ta2/read_write_loop.c
+
+#include "read_write_loop.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <stdio.h>
-#include <string.h>
-#define _GNU_SOURCE         /* See feature_test_macros(7) */
-#include <signal.h>
-#include <poll.h>
+#include <strings.h>
 #include <errno.h>
 
-#include "read_write_loop.h"
+/* Loop reading a socket and printing to stdout,
+ * while reading stdin and writing to the socket
+ * @sfd: The socket file descriptor. It is both bound and connected.
+ * @return: as soon as stdin signals EOF
+ */
+void read_write_loop(int sfd)
+{
+    ssize_t nBytes;
+    fd_set fds;
+    char buffer[1024];
+    struct timeval timeVal =(struct timeval){
+      .tv_sec = 5,
+      .tv_usec =0,
+    };
+    while(1){
+      FD_ZERO(&fds);
+      FD_SET(sfd,&fds);
+      FD_SET(STDIN_FILENO, &fds);
 
-void read_write_loop(int sfd){
-  ssize_t err1;
-  int err;
-  char buffer[1024];
-  struct pollfd fds[3];
-  fds[0].fd = sfd;
-  fds[0].events = POLLIN;
-  fds[1].fd = STDIN_FILENO;
-  fds[1].events = POLLIN;
-  fds[2].fd = STDOUT_FILENO;
-  fds[2].events = POLLOUT;
-
-  while(1){
-    //printf("w");
-    err = poll(fds,2,-1);
-    if(err == POLL_ERR){
-      perror("Error on poll");
-      exit(-1);
+      if(select(FD_SETSIZE, &fds, NULL, NULL, &timeVal) == -1){
+        fprintf(stderr, "Err: select function, %s\n",strerror(errno));
+        exit(-1);
+      }
+      if(FD_ISSET(sfd,&fds)){
+        nBytes=read(sfd,buffer,sizeof(buffer));
+        if(nBytes==0) return;
+        if(nBytes<0){
+          fprintf(stderr, "Err: reading from socket, %s\n",strerror(errno));
+          exit(-1);
+        }
+        if(write(STDOUT_FILENO,buffer,nBytes)==-1){
+          fprintf(stderr, "Err: writing on stdout %s\n",strerror(errno));
+          exit(-1);
+        }
+        memset((void *)buffer,0,sizeof(char)*1024);
+      }
+     if(FD_ISSET(STDIN_FILENO,&fds)){
+       nBytes=read(STDIN_FILENO,buffer,sizeof(buffer));
+       if(nBytes==0) return;
+       if(nBytes<0){
+         fprintf(stderr, "Err: reading from stdin %s\n",strerror(errno));
+         exit(-1);
+       }
+       if(write(sfd,buffer,nBytes)<0){
+         fprintf(stderr, "Err: writing on socket %s\n",strerror(errno));
+         exit(-1);
+       }
+       memset((void *)buffer,0,sizeof(char)*1024);
+     }
     }
-    if(fds[1].revents == POLLIN){
-      memset(buffer,'\0',1024);
-      //read from stdin
-      err1=read(STDIN_FILENO,buffer,1023);
-      if(err<0){
-        fprintf(stderr, "Err:Couldn't read from stdin\n");
-        exit(-1);
-      }
-      //Write on socket
-      if(write(sfd,buffer,err1)<0){
-        fprintf(stderr, "Err at writing on socket %s\n",strerror(errno));
-        exit(-1);
-      }
-    }
-    else if(fds[0].revents == POLLIN){
-      memset(buffer,'\0',1024);
-      //read from socket
-      if(read(sfd,buffer,1024)<0){
-        fprintf(stderr, "Err at reading from socket\n");
-        exit(-1);
-      }
-      //Write to STDOUT_FILENO
-      if(write(STDOUT_FILENO,buffer,strlen(buffer))<0){
-        fprintf(stderr, "Err=Failed at Writing on stdout\n");
-        exit(-1);
-      }
-    }
-  }
 
 }

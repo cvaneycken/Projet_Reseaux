@@ -4,11 +4,14 @@
 #include <string.h>
 #include <errno.h>
 #include <limits.h>
+#include <sys/ioctl.h>
 
 int main(int argc, char const *argv[]) {
-  uint8_t a: 2;
-  a=1;
-  printf("the size (in bits) of %d is %lu\n",a,(int)CHAR_BIT*sizeof(a));
-  printf("the size (in bits) of PTYPE_DATA is %lu\n",(int)CHAR_BIT*sizeof(PTYPE_DATA));
-  return 0;
+  char buf[1024];
+  while(1){
+    scanf("%1023s", buf);
+    if(buf!=NULL){
+      printf("Il y a qqchose: %s\n", buf);
+    }
+  }
 }
