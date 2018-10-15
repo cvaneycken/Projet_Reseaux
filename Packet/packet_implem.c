@@ -123,11 +123,17 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	//Writing payload
 	char *payload=malloc(sizeof(length));
 	if(payload==NULL)return dispErr(E_NOMEM);
-	memcpy(payload,(data+4),length);
+	memcpy(payload,(data+12),length);
 	pkt_set_payload(pkt,payload,length);
-	//Writing Crc1
-
-
+	//Writing CRC2
+	uint32_t crc2;
+	memcpy(&crc2,(data+12+length),sizeof(uint32_t));
+	crc2=ntohl(crc2);
+	if(crc2!=(uint32_t)crc32(0,(Bytedf *)payload,(uInt)length)){
+		fprintf(stderr, "Err: decode, crc2 not matching\n");
+		pkt_del(pkt);
+		return dispErr(E_CRC);
+	}
 	return PKT_OK;
 }
 
