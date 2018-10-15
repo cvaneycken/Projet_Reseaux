@@ -107,7 +107,6 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	pkt_set_length(pkt,ntohs(length));
 	// Writing timestamp
 	uint32_t ts;
-	if(ts==NULL)return dispErr(NO_MEM);
 	memcpy(&ts,(data+4),sizeof(uint32_t));
 	pkt_set_timestamp(pkt,ts);
 	//Writing CRC1
@@ -129,7 +128,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	uint32_t crc2;
 	memcpy(&crc2,(data+12+length),sizeof(uint32_t));
 	crc2=ntohl(crc2);
-	if(crc2!=(uint32_t)crc32(0,(Bytedf *)payload,(uInt)length)){
+	if(crc2!=(uint32_t)crc32(0,(Bytef *)payload,(uInt)length)){
 		fprintf(stderr, "Err: decode, crc2 not matching\n");
 		pkt_del(pkt);
 		return dispErr(E_CRC);
@@ -243,7 +242,5 @@ pkt_status_code pkt_set_payload(pkt_t *pkt,const char *data,const uint16_t lengt
   return PKT_OK;
 }
  int main(int argc, char const *argv[]) {
- 	pkt_t *myPkt=pkt_new();
-	char *buf=(char *)malloc(sizeof(myPkt));
  	return 0;
  }
