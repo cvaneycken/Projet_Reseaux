@@ -1,5 +1,12 @@
 #include "packet_interface.h"
-
+#include <stddef.h> /* size_t */
+#include <stdint.h> /* uintx_t */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <arpa/inet.h>
+#include <zlib.h>
 /* Extra #includes */
 /* Your code will be inserted here */
 
@@ -127,6 +134,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	if(payload==NULL)return dispErr(E_NOMEM);
 	memcpy(payload,(data+12),length);
 	pkt_set_payload(pkt,payload,length);
+	fprintf(stderr, "Le payload écrit est:%s\n", pkt_get_payload(pkt));
 	//Writing CRC2
 	uint32_t crc2;
 	memcpy(&crc2,(data+12+length),sizeof(uint32_t));
@@ -141,8 +149,11 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 
 pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 {
-	if(*len<12) //buffer too small (smaller than header(32) + timestamp(32) + CRC1(32))
+	if(*len<12){
+		fprintf(stderr, "*len<12 line 145\n");
 		return dispErr(E_NOMEM);
+	} //buffer too small (smaller than header(32) + timestamp(32) + CRC1(32))
+
 	uint32_t type = (uint32_t)pkt_get_type(pkt)<<30;
 	uint8_t tr_h = pkt_get_tr(pkt);
 	uint32_t tr_n = (uint32_t)tr_h<<29;
@@ -150,7 +161,7 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 	uint32_t seqnum = (uint32_t)pkt_get_seqnum(pkt)<<16;
 	uint16_t length_h = pkt_get_length(pkt);
 	uint32_t length_n = (uint32_t)htons(length_h);
-	uint32_t header = type&tr_n&window&seqnum&length_n;
+	uint32_t header = type|tr_n|window|seqnum|length_n;
 	uint32_t timestamp = pkt_get_timestamp(pkt);
 	uint32_t crc1 = htons(pkt_get_crc1(pkt));
 	memcpy(buf,(void *)&header,sizeof(uint32_t));
@@ -163,11 +174,14 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 	}
 	else
 	{
-		if((int)*len<(int)(length_h+12))
-			return dispErr(E_NOMEM);
+		if((int)*len<(int)(length_h+12)){
+					fprintf(stderr, "line 170\n");
+					return dispErr(E_NOMEM);
+		}
 		else
 		{
 			uint32_t crc2 = htons(pkt_get_crc2(pkt));
+			fprintf(stderr, "Le payload écrit est:%s\n", pkt_get_payload(pkt));
 			memcpy(buf+12,(void *)pkt_get_payload(pkt),length_h);
 			if(tr_h)//Packet has been troncated and there is no CRC2
 			{
@@ -176,8 +190,10 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 			}
 			else //Packet has not been troncated and there is a CRC2
 			{
-				if((int)*len<(int)(length_h+16))
+				if((int)*len<(int)(length_h+16)){
+					fprintf(stderr, "line 185\n");
 					return dispErr(E_NOMEM);
+				}
 				else
 				{
 					memcpy(buf+12+length_h,(void *)&crc2,sizeof(uint32_t));
@@ -285,7 +301,30 @@ pkt_status_code pkt_set_crc2(pkt_t *pkt, const uint32_t crc2)
 
 pkt_status_code pkt_set_payload(pkt_t *pkt,const char *data,const uint16_t length)
 {
+	pkt->payload=malloc(length);
 	if(strncpy(pkt->payload,data,length)==NULL)return  E_NOMEM;
   pkt_set_length(pkt,length);
   return PKT_OK;
 }
+/*
+*
+	*int main(int argc, char *argv[]){
+	*pkt_t *myPkt=pkt_new();
+	*char *data="Helloworld";
+	*pkt_set_type(myPkt,(const ptypes_t)1);
+	*pkt_set_tr(myPkt,0);
+	*pkt_set_window(myPkt,(const uint8_t)13);
+	*pkt_set_seqnum(myPkt,(const uint8_t)15);
+	*pkt_set_length(myPkt,(const uint16_t)strlen(data));
+	*pkt_set_timestamp(myPkt,(const uint32_t)12);
+	*pkt_set_crc1(myPkt,(const uint32_t)0);
+	*pkt_set_crc2(myPkt,(const uint32_t)0);
+	*pkt_set_payload(myPkt,(const char*)data,(const uint16_t)strlen(data));
+	*size_t len=sizeof(uint32_t)*4+sizeof(data);
+	*char *buf=malloc(len);
+	*if(0==pkt_encode(myPkt,buf,&len)){
+	*	printf("ça marche\n");
+	*}
+	*return 0;
+*}
+*/
