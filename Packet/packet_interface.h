@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <zlib.h>
+
 /* Raccourci pour struct pkt */
 typedef struct pkt pkt_t;
 
