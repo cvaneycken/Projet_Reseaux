@@ -1,10 +1,5 @@
 #include "packet_interface.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-#include <arpa/inet.h>
-#include <zlib.h>
+
 /* Extra #includes */
 /* Your code will be inserted here */
 
@@ -90,6 +85,9 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	memcpy((void *)header,(const void *)data,sizeof(uint32_t));
 	//Writing TYPE which is defined by 2 1st bits
 	const ptypes_t type=(*header)>>6;
+	if(type!=1&type!=2&type!=3){
+		return dispErr(E_TYPE);
+	}
 	pkt_set_type(pkt,type);
 	//Writing the Tr bit
 	uint8_t h=((*header)>>5)&0b00000001;
@@ -105,6 +103,11 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	memcpy(&length,(header+2),sizeof(uint16_t));
 	if(length>(uint16_t)MAX_PAYLOAD_SIZE) return dispErr(E_LENGTH);
 	pkt_set_length(pkt,ntohs(length));
+	//if type!= data,(it's ack or nack) it can't have any payload =>length==0?
+	if(type!=1&&pkt_get_length(pkt)!=0){
+		fprintf(stderr, "pkt of type:%d and length%d\n",pkt_get_type(pkt),pkt_get_length(pkt));
+		return dispErr(E_UNCONSISTENT);
+	}
 	// Writing timestamp
 	uint32_t ts;
 	memcpy(&ts,(data+4),sizeof(uint32_t));
@@ -113,7 +116,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	uint32_t crc1;
 	memcpy(&crc1,(data+8),sizeof(uint32_t));
 	crc1=ntohl(crc1);
-	if(crc1!=(uint32_t)crc32(0,(Bytef *)data,(uInt)(2*sizeof(uint32_t)))){
+	if(pkt_get_tr(pkt)==0&&crc1!=(uint32_t)crc32(0,(Bytef *)data,(uInt)(2*sizeof(uint32_t)))){
 		fprintf(stderr, "Err: decode, crc1 not matching\n");
 		pkt_del(pkt);
 		return dispErr(E_CRC);
