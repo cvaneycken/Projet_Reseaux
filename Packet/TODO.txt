@@ -6,3 +6,7 @@
 22-26/10 Interopérabilité:
 
 02/11 Deuxième soummission:
+
+
+Commentaire 17/10/18 00:06:
+	Length et les CRC sont indiqués être stocké en network byte order. Est-ce qu'on doit vraiment les changer de sens du coup? Est-ce que qu'il faudrait changer le reste de sens?

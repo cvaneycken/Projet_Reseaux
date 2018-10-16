@@ -15,7 +15,7 @@ struct __attribute__((__packed__)) pkt {
 uint8_t type:2;
 uint8_t trFlag:1;
 uint8_t window:5;
-uint8_t seqNum: 8;
+uint8_t seqNum:8;
 uint16_t length;
 //Header ends -> 32 Bytes
 uint32_t timeStamp;
@@ -90,24 +90,35 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	if(header==NULL) return dispErr(E_NOMEM);
 	if(len<sizeof(uint32_t)) return dispErr(E_NOHEADER);
 	memcpy((void *)header,(const void *)data,sizeof(uint32_t));
+
 	//Writing TYPE which is defined by 2 1st bits
 	const ptypes_t type=(*header)>>6;
 	if((type!=1)&&(type!=2)&&(type!=3)){
 		return dispErr(E_TYPE);
 	}
 	pkt_set_type(pkt,type);
+
 	//Writing the Tr bit
-	uint8_t h=((*header)>>5)&0b00000001;
+	uint8_t h=((*header)>>5)&0b00000001; //-------Could try >>5 and <<2
 	pkt_set_tr(pkt,h);
+
 	//Writing  the window
 	h=(*header)&0b00011111;
 	pkt_set_window(pkt,h);
+
 	//Writing the seqNum which is from 9th to 19h bit so header+1=After 1 byte
-	h=*(header+1);
-	pkt_set_seqnum(pkt,h);
+	//h=*(header+1); //------Hors de la zone attribuée lors du malloc au header, potentiellement n'importe quoi
+	//pkt_set_seqnum(pkt,h);
+	char * seqNum = malloc(sizeof(char));
+	memcpy((void *)seqNum,(data+1),sizeof(char));
+	uint8_t seqInt = (uint8_t)atoi(seqNum);
+	pkt_set_seqnum(pkt,seqInt);
+	//----mettre cette ligne de code ou la version précédente n'a rien changé dans les tests inginious/
+
 	//Writing length
 	uint16_t length;
-	memcpy(&length,(header+2),sizeof(uint16_t));
+	//memcpy(&length,(header+2),sizeof(uint16_t)); //------Hors de la zone attribuée lors du malloc au header, potentiellement n'importe quoi
+	memcpy(&length,(data+2),sizeof(uint16_t)); //----mettre cette ligne de code ou la version précédente n'a rien changé dans les tests inginious
 	if(length>(uint16_t)MAX_PAYLOAD_SIZE) return dispErr(E_LENGTH);
 	pkt_set_length(pkt,ntohs(length));
 	//if type!= data,(it's ack or nack) it can't have any payload =>length==0?
@@ -149,11 +160,11 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 
 pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 {
-	if(*len<12){
+	if(*len<12){//buffer too small (smaller than header(32) + timestamp(32) + CRC1(32))
 		fprintf(stderr, "*len<12 line 145\n");
 		return dispErr(E_NOMEM);
-	} //buffer too small (smaller than header(32) + timestamp(32) + CRC1(32))
-
+	} 
+	//encoding of header + timestamp + CRC1
 	uint32_t type = (uint32_t)pkt_get_type(pkt)<<30;
 	uint8_t tr_h = pkt_get_tr(pkt);
 	uint32_t tr_n = (uint32_t)tr_h<<29;
@@ -167,34 +178,37 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 	memcpy(buf,(void *)&header,sizeof(uint32_t));
 	memcpy(buf+4,(void *)&crc1,sizeof(uint32_t));
 	memcpy(buf+8,(void *)&timestamp,sizeof(uint32_t));
-	if(pkt_get_type(pkt)!=1)//packet is ACK ou NACK
+	if(pkt_get_type(pkt)!=1)//packet is ACK ou NACK => no payload => end of encoding
 	{
 		*len = 3*sizeof(uint32_t);
 		return dispErr(PKT_OK);
 	}
-	else
+	else //packet has type Data and payload must be included
 	{
-		if((int)*len<(int)(length_h+12)){
-					fprintf(stderr, "line 170\n");
-					return dispErr(E_NOMEM);
+		if((int)*len<(int)(length_h+12))//Not enough memory in buffer
+		{
+			fprintf(stderr, "line 170\n");
+			return dispErr(E_NOMEM);
 		}
 		else
 		{
+			//encoding of payload
 			uint32_t crc2 = htons(pkt_get_crc2(pkt));
 			fprintf(stderr, "Le payload écrit est:%s\n", pkt_get_payload(pkt));
 			memcpy(buf+12,(void *)pkt_get_payload(pkt),length_h);
-			if(tr_h)//Packet has been troncated and there is no CRC2
+			if(tr_h)//Packet has been troncated => no CRC2 => end of encoding
 			{
 				*len = length_h+12;
 				return dispErr(PKT_OK);
 			}
-			else //Packet has not been troncated and there is a CRC2
+			else
 			{
-				if((int)*len<(int)(length_h+16)){
+				//Encoding of CRC2 (packet has not been troncated)
+				if((int)*len<(int)(length_h+16)){//Not enough memory in buffer
 					fprintf(stderr, "line 185\n");
 					return dispErr(E_NOMEM);
 				}
-				else
+				else //End of encoding
 				{
 					memcpy(buf+12+length_h,(void *)&crc2,sizeof(uint32_t));
 					*len = length_h+16;
