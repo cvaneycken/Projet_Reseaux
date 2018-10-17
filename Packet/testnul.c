@@ -49,8 +49,12 @@ int main(int argc, char const *argv[]){
     //uint8_t taille=(uint8_t)15;
     //uint8_t header=0b10100000;
     //header=header|taille;
-    uint32_t data=0b01101101000001110000010100111111;
+    uint32_t data=0b00000000000010110111101101011100;
+    uint32_t data2=0b01011100011110110000000000001011;
+    printf("ce qu'on a:\n");
     check(data);
+    printf("ce qu'ils ont :\n");
+    check(data2);
     uint32_t type=(uint32_t)1<<30;
     uint32_t tr_h=(uint32_t)1<<29;
     uint32_t window=(uint32_t)13<<24;
