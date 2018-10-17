@@ -12,18 +12,18 @@ int main(int argc, char *argv[])
 	char *host;
 	int port;
 	int opt;
-  int i=0;
+	int i=0;
 	while ((opt = getopt(argc, argv, "f")) != -1) {
 		switch (opt) {
       case 'f':
-        printf("yo chose f with %s\n", optarg);
+        printf("you chose f with %s\n", optarg);
         break;
-      }
     }
+  }
   for(i=0;i<argc;i++){
     if(strcmp(argv[i],"::1")==0){
       host="::";
-			port=atoi(argc[i+1]);
+			port=atoi(argv[i+1]);
     }
   }
 	//sender is client
