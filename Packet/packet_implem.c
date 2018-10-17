@@ -12,16 +12,16 @@
 
 struct __attribute__((__packed__)) pkt {
 //Header begins
-uint8_t type:2;
-uint8_t trFlag:1;
-uint8_t window:5;
-uint8_t seqNum:8;
-uint16_t length;
-//Header ends -> 32 Bytes
-uint32_t timeStamp;
-uint32_t crc1;
-char *payload;
-uint32_t crc2;
+    uint8_t window:5;
+    uint8_t trFlag:1;
+    uint8_t type:2;
+    uint8_t seqNum:8;
+    uint16_t length;
+    //Header ends -> 32 Bytes
+    uint32_t timeStamp;
+    uint32_t crc1;
+    char *payload;
+    uint32_t crc2;
 };
 
 /* Extra code */
@@ -226,48 +226,67 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt){
 		return dispErr(E_NOMEM);
 	}
 	memcpy((void *)pkt,(void *)data,sizeof(data));
+	uint8_t tempTr=pkt_get_tr(pkt);
+	pkt_set_tr(pkt,0);
+	//il se peut qu'il faille ntohl après les if
+	pkt_set_crc1(pkt,ntohl(pkt_get_crc1(pkt)));
+	pkt_set_crc2(pkt,ntohl(pkt_get_crc2(pkt)));
+	//Test crc1
+	uint32_t crc1 = crc32(0L, Z_NULL, 0);
+	if(pkt_get_crc1(pkt)!=(uint32_t)crc32(crc1,(Bytef *)pkt,(uInt)(2*sizeof(uint32_t)))){
+		fprintf(stderr, "crc1 ne correspnd pas\n");
+		return dispErr(E_CRC);
+	}
+	uint32_t crc2 = crc32(0L, Z_NULL, 0);
+	if(pkt_get_crc2(pkt)!=(uint32_t)crc32(crc2,(Bytef *)pkt_get_payload(pkt),(uInt)pkt_get_length(pkt))){
+		fprintf(stderr, "crc2 ne correspnd pas\n");
+		return dispErr(E_CRC);
+	}
+	pkt_set_length(pkt,ntohs(pkt_get_length(pkt)));
+	pkt_set_tr(pkt,tempTr);
+	memcpy((void *)pkt+12,(void *)data+12,pkt_get_length(pkt));
 	//modification length
-	uint16_t length1;
-	memcpy((void *)&length1,(void *)(data+2),sizeof(uint16_t));
-	int length2=(uint16_t)ntohs(length1);
-	memcpy((void *)(pkt+2),(void *)&length2,sizeof(uint16_t));
+
 	//modification crc1
-	uint32_t crc1;
-	memcpy((void *)&crc1,(void *)(data+8),sizeof(uint32_t));
-	crc1=(uint32_t)ntohl(crc1);
-	memcpy((void *)(pkt+8),(void *)&crc1,sizeof(uint32_t));
 	//modification crc2
-	uint32_t crc2;
-	memcpy((void *)&crc2,(void *)(data+12+length2),sizeof(uint32_t));
-	crc2=(uint32_t)ntohl(crc2);
-	memcpy((void *)(pkt+12+length2),(void *)&crc1,sizeof(uint32_t));
-	//Cpy payload
-	memcpy((void *)(pkt+12),(void *)(data+12),sizeof(char)*pkt_get_length(pkt));
 return PKT_OK;
 }
 pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len){
 	if(sizeof(buf)<sizeof(pkt)){
 		return dispErr(E_NOMEM);
 	}
-	memcpy((void *)buf,(void *)pkt,sizeof(pkt));
-	memcpy((void *)(buf+12),(void *)pkt_get_payload(pkt),sizeof(char)*pkt_get_length(pkt));
-	//modification length
+	//tempPkt à modifier avant d'envoyer
+	pkt_t *tempPkt=malloc(sizeof(pkt));
+	if(tempPkt==NULL){
+		fprintf(stderr, "Err: malloc tempPkt\n");
+		return dispErr(E_NOMEM);
+	}
+	//
+	memcpy((void *)tempPkt,(void *)pkt,sizeof(pkt));
+	//store initial value of tr
+	uint8_t tempTr=pkt_get_tr(tempPkt);
+	//set tr to 0
+	pkt_set_tr(tempPkt,0);
 	uint16_t length1;
-	memcpy((void *)&length1,(void *)(buf+2),sizeof(uint16_t));
-	int length2=(uint16_t)htons(length1);
-	memcpy((void *)(buf+2),(void *)&length2,sizeof(uint16_t));
+	length1=pkt_get_length(tempPkt);
+	uint16_t length2=(uint16_t)htons(length1);
+	pkt_set_length(tempPkt,length2);
 	//modification crc1
-	uint32_t crc1;
-	memcpy((void *)&crc1,(void *)(buf+8),sizeof(uint32_t));
+	uint32_t crc1 = crc32(0L, Z_NULL, 0);
+	crc1=(uint32_t)crc32(crc1,(Bytef *)tempPkt,(uInt)(2*sizeof(uint32_t)));
 	crc1=(uint32_t)htonl(crc1);
-	memcpy((void *)(buf+8),(void *)&crc1,sizeof(uint32_t));
+	pkt_set_crc1(tempPkt,crc1);
 	//modification crc2
-	uint32_t crc2;
-	memcpy((void *)&crc2,(void *)(buf+12+length1),sizeof(uint32_t));
+	uint32_t crc2 = crc32(0L, Z_NULL, 0);
+	crc2=(uint32_t)crc32(crc2,(Bytef *)pkt_get_payload(tempPkt),(uInt)length1);
+	pkt_set_crc2(tempPkt,crc2);
 	crc2=(uint32_t)htonl(crc2);
-	memcpy((void *)(buf+12+length1),(void *)&crc2,sizeof(uint32_t));
-	//modi
+
+	pkt_set_tr(tempPkt,tempTr);
+	memcpy((void *)buf,(void *)tempPkt,sizeof(tempPkt));
+	memcpy((void *)buf+12,(void *)pkt_get_payload(pkt),length1);
 	*len=sizeof(uint32_t)*4+sizeof(char)*pkt_get_length(pkt);
+	free(tempPkt);
 	return PKT_OK;
 }
 
