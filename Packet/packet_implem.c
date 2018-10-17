@@ -82,7 +82,7 @@ void pkt_del(pkt_t *pkt)
 {
     free(pkt);
 }
-
+/*
 pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 {
 	//header is 32 Bytes long
@@ -106,7 +106,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	h=(*header)&0b00011111;
 	pkt_set_window(pkt,h);
 
-	//Writing the seqNum which is from 9th to 19h bit so header+1=After 1 byte
+	//Writing the seqNum which is from 9th to 16th bit so header+1=After 1 byte
 	//h=*(header+1); //------Hors de la zone attribuée lors du malloc au header, potentiellement n'importe quoi
 	//pkt_set_seqnum(pkt,h);
 	char * seqNum = malloc(sizeof(char));
@@ -133,7 +133,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	//Writing CRC1
 	uint32_t crc1;
 	memcpy(&crc1,(data+8),sizeof(uint32_t));
-	crc1=ntohl(crc1);
+	//crc1=ntohl(crc1);
 	if(pkt_get_tr(pkt)==0&&crc1!=(uint32_t)crc32(0,(Bytef *)data,(uInt)(2*sizeof(uint32_t)))){
 		fprintf(stderr, "Err: decode, crc1 not matching\n");
 		pkt_del(pkt);
@@ -158,7 +158,8 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	return PKT_OK;
 }
 
-/*pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
+/*
+pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 {
 	if(*len<12){//buffer too small (smaller than header(32) + timestamp(32) + CRC1(32))
 		fprintf(stderr, "*len<12 line 145\n");
@@ -226,6 +227,57 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 	memcpy(buf,pkt,pkt_get_length(pkt)+16);
 	*len = pkt_get_length(pkt)+16;
 	return dispErr(PKT_OK);
+}
+*/
+pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt){
+	if(len<sizeof(uint32_t)){
+		fprintf(stderr, "No header\n");
+		return dispErr(E_NOMEM);
+	}
+	memcpy((void *)pkt,(void *)data,sizeof(data));
+	//modification length
+	uint16_t length1;
+	memcpy((void *)&length1,(void *)(data+2),sizeof(uint16_t));
+	int length2=(uint16_t)ntohs(length1);
+	memcpy((void *)(pkt+2),(void *)&length2,sizeof(uint16_t));
+	//modification crc1
+	uint32_t crc1;
+	memcpy((void *)&crc1,(void *)(data+8),sizeof(uint32_t));
+	crc1=(uint32_t)ntohl(crc1);
+	memcpy((void *)(pkt+8),(void *)&crc1,sizeof(uint32_t));
+	//modification crc2
+	uint32_t crc2;
+	memcpy((void *)&crc2,(void *)(data+12+length2),sizeof(uint32_t));
+	crc2=(uint32_t)ntohl(crc2);
+	memcpy((void *)(pkt+12+length2),(void *)&crc1,sizeof(uint32_t));
+	//Cpy payload
+	memcpy((void *)(pkt+12),(void *)(data+12),sizeof(char)*pkt_get_length(pkt));
+return PKT_OK;
+}
+pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len){
+	if(sizeof(buf)<sizeof(pkt)){
+		return dispErr(E_NOMEM);
+	}
+	memcpy((void *)buf,(void *)pkt,sizeof(pkt));
+	memcpy((void *)(buf+12),(void *)pkt_get_payload(pkt),sizeof(char)*pkt_get_length(pkt));
+	//modification length
+	uint16_t length1;
+	memcpy((void *)&length1,(void *)(buf+2),sizeof(uint16_t));
+	int length2=(uint16_t)htons(length1);
+	memcpy((void *)(buf+2),(void *)&length2,sizeof(uint16_t));
+	//modification crc1
+	uint32_t crc1;
+	memcpy((void *)&crc1,(void *)(buf+8),sizeof(uint32_t));
+	crc1=(uint32_t)htonl(crc1);
+	memcpy((void *)(buf+8),(void *)&crc1,sizeof(uint32_t));
+	//modification crc2
+	uint32_t crc2;
+	memcpy((void *)&crc2,(void *)(buf+12+length1),sizeof(uint32_t));
+	crc2=(uint32_t)htonl(crc2);
+	memcpy((void *)(buf+12+length1),(void *)&crc2,sizeof(uint32_t));
+	//modi
+	*len=sizeof(uint32_t)*4+sizeof(char)*pkt_get_length(pkt);
+	return PKT_OK;
 }
 
 
