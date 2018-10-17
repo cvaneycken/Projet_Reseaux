@@ -157,7 +157,7 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	}
 	return PKT_OK;
 }
-*/
+
 /*
 pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 {
@@ -218,6 +218,15 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 			}
 		}
 	}
+}*/
+
+pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
+{
+	if((int)*len < (int)pkt_get_length(pkt)+16)
+		return dispErr(E_NOMEM);
+	memcpy(buf,pkt,pkt_get_length(pkt)+16);
+	*len = pkt_get_length(pkt)+16;
+	return dispErr(PKT_OK);
 }
 */
 pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt){
@@ -289,6 +298,7 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len){
 	free(tempPkt);
 	return PKT_OK;
 }
+
 
 ptypes_t pkt_get_type(const pkt_t* pkt)
 {
