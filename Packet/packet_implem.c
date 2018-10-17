@@ -158,12 +158,12 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt)
 	return PKT_OK;
 }
 
-pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
+/*pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 {
 	if(*len<12){//buffer too small (smaller than header(32) + timestamp(32) + CRC1(32))
 		fprintf(stderr, "*len<12 line 145\n");
 		return dispErr(E_NOMEM);
-	} 
+	}
 	//encoding of header + timestamp + CRC1
 	uint32_t type = (uint32_t)pkt_get_type(pkt)<<30;
 	uint8_t tr_h = pkt_get_tr(pkt);
@@ -217,7 +217,17 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 			}
 		}
 	}
+}*/
+
+pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
+{
+	if((int)*len < (int)pkt_get_length(pkt)+16)
+		return dispErr(E_NOMEM);
+	memcpy(buf,pkt,pkt_get_length(pkt)+16);
+	*len = pkt_get_length(pkt)+16;
+	return dispErr(PKT_OK);
 }
+
 
 ptypes_t pkt_get_type(const pkt_t* pkt)
 {
