@@ -12,9 +12,9 @@
 
 struct __attribute__((__packed__)) pkt {
 //Header begins
-uint8_t type:2;
-uint8_t trFlag:1;
 uint8_t window:5;
+uint8_t trFlag:1;
+uint8_t type:2;
 uint8_t seqNum:8;
 uint16_t length;
 //Header ends -> 32 Bytes
@@ -220,15 +220,15 @@ pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 	}
 }*/
 
-pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
+/*pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len)
 {
 	if((int)*len < (int)pkt_get_length(pkt)+16)
 		return dispErr(E_NOMEM);
 	memcpy(buf,pkt,pkt_get_length(pkt)+16);
 	*len = pkt_get_length(pkt)+16;
 	return dispErr(PKT_OK);
-}
-*/
+}*/
+
 pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt){
 	if(len<sizeof(uint32_t)){
 		fprintf(stderr, "No header\n");
@@ -254,6 +254,8 @@ pkt_status_code pkt_decode(const char *data, const size_t len, pkt_t *pkt){
 	memcpy((void *)(pkt+12),(void *)(data+12),sizeof(char)*pkt_get_length(pkt));
 return PKT_OK;
 }
+
+
 pkt_status_code pkt_encode(const pkt_t* pkt, char *buf, size_t *len){
 	if(sizeof(buf)<sizeof(pkt)){
 		return dispErr(E_NOMEM);
