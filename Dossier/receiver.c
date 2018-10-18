@@ -2,42 +2,43 @@
 #include <stdio.h> /* fprintf */
 #include <unistd.h> /* getopt */
 
-#include "real_address.h"
-#include "create_socket.h"
-#include "read_write_loop.h"
-#include "wait_for_client.h"
+
+#include "functions_library.h"
 
 int main(int argc, char *argv[])
 {
-	int client = 0;
-	int port = 12345;
+	char *host;
+	int port = -1;
 	int opt;
-	char *host = "::1";
+	int i=0;
+	//int f = 0; //flag determining if the -f option is activated
 
-	while ((opt = getopt(argc, argv, "scp:h:")) != -1) {
+	//Check for the facultative -f argument
+	while ((opt = getopt(argc, argv, "f")) != -1) {
 		switch (opt) {
-			case 's':
-				client = 0;
-				break;
-			case 'c':
-				client = 1;
-				break;
-			case 'p':
-				port = atoi(optarg);
-				break;
-			case 'h':
-				host = optarg;
-				break;
-			default:
-				fprintf(stderr, "Usage:\n"
-								"-s      Act as server\n"
-								"-c      Act as client\n"
-								"-p PORT UDP port to connect to (client)\n"
-								"        or to listen on (server)\n"
-								"-h HOST UDP of the server (client)\n"
-								"        or on which we listen (server)\n");
-				break;
+      case 'f':
+				//f = 1;
+        printf("you chose f with %s\n", optarg);
+        break;
+    }
+  }
+
+	//Retrieve the host name and port number from arguments
+	for(i=0;i<argc;i++){
+		printf("argv[%i]: %s\n",i,argv[i]);
+    if(strcmp(argv[i],"::1")==0){
+      host="::1"; //----- host = :: and not host = ::1 ?
+			port=atoi(argv[i+1]);
+    }
+		else if(strcmp(argv[i],"::")==0)
+		{
+			//Listening on all ports
 		}
+  }
+	if(port == -1)
+	{
+		fprintf(stderr,"No argument matches a valid hostname");
+		return EXIT_FAILURE;
 	}
 	/* Resolve the hostname */
 	struct sockaddr_in6 addr;
@@ -48,17 +49,16 @@ int main(int argc, char *argv[])
 	}
 	/* Get a socket */
 	int sfd;
-	if (client) {
-		sfd = create_socket(NULL, -1, &addr, port); /* Connected */
-	} else {
-		sfd = create_socket(&addr, port, NULL, -1); /* Bound */
-		if (sfd > 0 && wait_for_client(sfd) < 0) { /* Connected */
-			fprintf(stderr,
-					"Could not connect the socket after the first message.\n");
-			close(sfd);
-			return EXIT_FAILURE;
-		}
+	/* Creation of sender socket deleted
+	sfd = create_socket(NULL, -1, &addr, port); // Connected */
+	sfd = create_socket(&addr, port, NULL, -1); // Bound
+	if (sfd > 0 && wait_for_client(sfd) < 0) { // Connected
+	fprintf(stderr,
+			"Could not connect the socket after the first message.\n");
+	close(sfd);
+	return EXIT_FAILURE;
 	}
+
 	if (sfd < 0) {
 		fprintf(stderr, "Failed to create the socket!\n");
 		return EXIT_FAILURE;
@@ -70,4 +70,3 @@ int main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 }
-
