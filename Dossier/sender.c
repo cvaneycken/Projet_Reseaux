@@ -9,26 +9,32 @@ int main(int argc, char *argv[])
 {
 	char *host;
 	int port = -1;
-	int opt;
+	//int opt; //TO delet if switch(opt) is not used
 	int i=0;
-	//int f = 0; //flag determining if the -f option is activated
+	int f=0; //flag determining if the -f option is activated
+	char * file;// file from which data is read
 
-	//Check for the facultative -f argument
+	/*//Check for the facultative -f argument
 	while ((opt = getopt(argc, argv, "f")) != -1) {
 		switch (opt) {
       case 'f':
-				//f = 1;
+				f = 1;
         printf("you chose f with %s\n", optarg);
         break;
     }
-  }
+  }*/ // Done with strcmp
 
-	//Retrieve the host name and port number from arguments
+	//Retrieve host name, port number, [file] from arguments
   for(i=0;i<argc;i++){
     if(strcmp(argv[i],"::1")==0){
-      host="::1"; //----- host = :: and not host = ::1 ?
+      host=argv[i];
 			port=atoi(argv[i+1]);
     }
+		else if(strcmp(argv[i],"-f")==0)
+		{
+			f=1;
+			file=argv[i+1];
+		}
   }
 	if(port == -1)
 	{
@@ -51,7 +57,81 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	/* Process I/O */
-	read_write_loop(sfd);
+	//read_write_loop(sfd);
+
+	ssize_t nBytes;
+	fd_set fds;
+	char buffer[1024]; //------ Pk cette valeur là?
+	struct timeval timeVal =(struct timeval){
+		.tv_sec = 5,
+		.tv_usec =0,
+	};
+
+	//selection of input depending of -f or not
+	int input;
+	if(f)
+	{
+		//open input for file
+		printf("input file is %s\n",file);
+	}
+	else
+	{
+		printf("input is %d\n",input);
+		input = STDIN_FILENO;
+	}
+	//Send/listen loop
+	while(1){
+		FD_ZERO(&fds);
+		FD_SET(sfd,&fds);
+		FD_SET(input, &fds);
+
+		/*if(select(FD_SETSIZE, &fds, NULL, NULL, &timeVal) == -1){ //checks for available elements on input
+			fprintf(stderr, "Err: select function, %s\n",strerror(errno));
+			exit(-1);
+		}*/ //Previous place of this
+		if(FD_ISSET(sfd,&fds)){
+			nBytes=read(sfd,buffer,sizeof(buffer));
+			if(nBytes==0)
+			{
+				printf("nBytes==0\n");
+				return -1;
+			}
+			if(nBytes<0){
+				fprintf(stderr, "Err: reading from socket, %s\n",strerror(errno));
+				exit(-1);
+			}
+			if(write(STDOUT_FILENO,buffer,nBytes)==-1){
+				fprintf(stderr, "Err: writing on stdout %s\n",strerror(errno));
+				exit(-1);
+			}
+			memset((void *)buffer,0,sizeof(char)*1024);
+		}
+
+		//checking for available elements on input
+		if(select(FD_SETSIZE, &fds, NULL, NULL, &timeVal) == -1){
+			fprintf(stderr, "Err: select function, %s\n",strerror(errno));
+			exit(-1);
+		}
+
+		//Reading from input to write on socket
+	 if(FD_ISSET(input,&fds)){
+		 nBytes=read(input,buffer,sizeof(buffer));
+		 if(nBytes==0)
+		 {
+			 printf("nBytes==0\n");
+			 return -1;
+		 }
+		 if(nBytes<0){
+			 fprintf(stderr, "Err: reading from stdin %s\n",strerror(errno));
+			 exit(-1);
+		 }
+		 if(write(sfd,buffer,nBytes)<0){
+			 fprintf(stderr, "Err: writing on socket %s\n",strerror(errno));
+			 exit(-1);
+		 }
+		 memset((void *)buffer,0,sizeof(char)*1024);
+	 }
+ }
 
 	close(sfd);
 

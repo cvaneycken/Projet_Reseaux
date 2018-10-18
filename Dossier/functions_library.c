@@ -1,15 +1,5 @@
 
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <netdb.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h> /* sockaddr_in6 */
-#include <arpa/inet.h>
-#include <netinet/in.h> /* * sockaddr_in6 */
-#include <errno.h>      /* errno */
+#include "functions_library.h"
 #define _OPEN_SYS_SOCK_IPV6 1
 
 int create_socket(struct sockaddr_in6 *source_addr, int src_port, struct sockaddr_in6 *dest_addr, int dst_port){
@@ -116,7 +106,7 @@ void read_write_loop(int sfd)
 {
     ssize_t nBytes;
     fd_set fds;
-    char buffer[1024];
+    char buffer[1024]; //------ Pk cette valeur là?
     struct timeval timeVal =(struct timeval){
       .tv_sec = 5,
       .tv_usec =0,
@@ -126,10 +116,10 @@ void read_write_loop(int sfd)
       FD_SET(sfd,&fds);
       FD_SET(STDIN_FILENO, &fds);
 
-      if(select(FD_SETSIZE, &fds, NULL, NULL, &timeVal) == -1){
+      /*if(select(FD_SETSIZE, &fds, NULL, NULL, &timeVal) == -1){ //checks for available elements on input
         fprintf(stderr, "Err: select function, %s\n",strerror(errno));
         exit(-1);
-      }
+      }*/ //Previous place of this
       if(FD_ISSET(sfd,&fds)){
         nBytes=read(sfd,buffer,sizeof(buffer));
         if(nBytes==0) return;
@@ -143,6 +133,14 @@ void read_write_loop(int sfd)
         }
         memset((void *)buffer,0,sizeof(char)*1024);
       }
+
+      //checking for available elements on input
+      if(select(FD_SETSIZE, &fds, NULL, NULL, &timeVal) == -1){
+        fprintf(stderr, "Err: select function, %s\n",strerror(errno));
+        exit(-1);
+      }
+
+      //Reading from stdin to write on socket
      if(FD_ISSET(STDIN_FILENO,&fds)){
        nBytes=read(STDIN_FILENO,buffer,sizeof(buffer));
        if(nBytes==0) return;
@@ -156,6 +154,6 @@ void read_write_loop(int sfd)
        }
        memset((void *)buffer,0,sizeof(char)*1024);
      }
-    }
+   }
 }
 //SOURCE: https://github.com/sCreami/cnp3-p1/blob/master/inginious/ta2/read_write_loop.c

@@ -9,30 +9,36 @@ int main(int argc, char *argv[])
 {
 	char *host;
 	int port = -1;
-	int opt;
+	//int opt; //TO delet if switch(opt) is not used
 	int i=0;
-	//int f = 0; //flag determining if the -f option is activated
+	int f = 0; //flag determining if the -f option is activated
+	char * file;// file to which data is sent
 
 	//Check for the facultative -f argument
-	while ((opt = getopt(argc, argv, "f")) != -1) {
+	/*while ((opt = getopt(argc, argv, "f")) != -1) {
 		switch (opt) {
       case 'f':
 				//f = 1;
         printf("you chose f with %s\n", optarg);
         break;
     }
-  }
+  }*/
 
 	//Retrieve the host name and port number from arguments
 	for(i=0;i<argc;i++){
-		printf("argv[%i]: %s\n",i,argv[i]);
     if(strcmp(argv[i],"::1")==0){
-      host="::1"; //----- host = :: and not host = ::1 ?
+      host=argv[i];
 			port=atoi(argv[i+1]);
     }
 		else if(strcmp(argv[i],"::")==0)
 		{
-			//Listening on all ports
+			//Listening to all ports
+		}
+		else if(strcmp(argv[i],"-f")==0)
+		{
+			f=1;
+			file=argv[i+1];
+			printf("you chose f with %s, f = %d\n", file,f);
 		}
   }
 	if(port == -1)

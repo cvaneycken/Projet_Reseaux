@@ -45,9 +45,10 @@ int create_socket(struct sockaddr_in6 *source_addr,
   */
  int wait_for_client(int sfd);
 
- /* Loop reading a socket and printing to stdout,
-  * while reading stdin and writing to the socket
+ /* Loop reading a socket and printing to stdout for a receiver
+  * Loop reading stdin and writing to the socket for a sender
   * @sfd: The socket file descriptor. It is both bound and connected.
+  * @type: has value 1 for a receiver and value 0 for a receptor
   * @return: as soon as stdin signals EOF
   */
  void read_write_loop(const int sfd);
